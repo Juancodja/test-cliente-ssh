@@ -9,7 +9,7 @@ import (
 
 type NameList []string
 
-func (n NameList) Marshall() []byte {
+func (n NameList) Marshal() []byte {
 	s := strings.Join(n, ",")
 
 	buf := new(bytes.Buffer)
