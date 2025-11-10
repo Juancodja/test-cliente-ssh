@@ -1,0 +1,21 @@
+
+services:
+  ssh-server:
+    image: linuxserver/openssh-server:latest
+    container_name: ssh-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - PASSWORD_ACCESS=true
+      - USER_NAME=test
+      - USER_PASSWORD=1234
+    ports:
+      - "2222:2222"
+
+  sushi:
+    build: .
+    depends_on:
+      - ssh-server
+    command: ["ssh-server", "22"] 
+
