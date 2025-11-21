@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -21,7 +20,7 @@ type SSHMessage struct {
 }
 
 func (m *SSHMessage) Marshal() []byte {
-	buf := new(bytes.Buffer)
+	buf := &bytes.Buffer{}
 
 	binary.Write(buf, binary.BigEndian, m.PacketLength)
 
@@ -35,16 +34,25 @@ func (m *SSHMessage) Marshal() []byte {
 }
 
 func NewSSHMessage(payload, mac []byte, blockSize int) *SSHMessage {
-	packlen := len(payload) + 1 + MIN_PAD_LEN
-	r := packlen % blockSize
+	paylen := len(payload)
+	padlen := 4
+	packlen := paylen + padlen + 1
 
-	extrapad := blockSize - r
-	packlen += extrapad
+	resto := (packlen + 4) % blockSize
 
-	padlen := MIN_PAD_LEN + extrapad
+	padlen = padlen + blockSize - resto
+
+	packlen = paylen + padlen + 1
+
+	resto = (packlen + 4) % blockSize
 
 	pad := make([]byte, padlen)
-	rand.Read(pad[:])
+
+	assert := len(payload) + len(pad) + 1 + 4
+
+	if assert%blockSize != 0 {
+		panic("Largo paquete incorrecto")
+	}
 
 	return &SSHMessage{
 		uint32(packlen),
@@ -57,6 +65,7 @@ func NewSSHMessage(payload, mac []byte, blockSize int) *SSHMessage {
 
 func SendMessage(conn net.Conn, data []byte) error {
 	n, err := conn.Write(data)
+	fmt.Printf("Enviados %d bytes\n", n)
 	if err != nil {
 		return fmt.Errorf("write failed: %w", err)
 	}
@@ -122,4 +131,19 @@ func ReadNextMessage(conn io.Reader, maclen int) (*SSHMessage, error) {
 		Padding:       padding,
 		MAC:           mac,
 	}, nil
+}
+
+func ReadSshString(b *bytes.Buffer) (uint32, []byte, error) {
+	var l uint32
+	if err := binary.Read(b, binary.BigEndian, &l); err != nil {
+		return 0, nil, err
+	}
+	s := make([]byte, l)
+
+	_, err := io.ReadFull(b, s)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return l, s, nil
 }

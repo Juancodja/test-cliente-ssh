@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/ecdh"
 	"crypto/rand"
 	"flag"
@@ -9,7 +10,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/Juancodja/sushi-ssh/kex"
 	"github.com/Juancodja/sushi-ssh/utils"
@@ -72,11 +72,11 @@ func main() {
 	}
 
 	fmt.Println("CLIENTE: SSH_MSG_KEXINIT")
-	//utils.PrettyPrint(ckinit)
 
 	m := utils.NewSSHMessage(ckinit.Marshal(), []byte{}, 8)
 
-	err = utils.SendMessage(conn, m.Marshal())
+	mBytes := m.Marshal()
+	err = utils.SendMessage(conn, mBytes)
 	if err != nil {
 		panic(err)
 	}
@@ -97,9 +97,9 @@ func main() {
 	utils.PrettyPrint(algs)
 
 	Q, err := ecdh.X25519().GenerateKey(rand.Reader)
-	Q_pub := Q.PublicKey().Bytes()
+	Q_c := Q.PublicKey().Bytes()
 
-	keylen := uint32(len(Q_pub))
+	keylen := uint32(len(Q_c))
 	kexPayload := []byte{30}
 	kexPayload = append(kexPayload,
 		byte(keylen>>24),
@@ -107,20 +107,40 @@ func main() {
 		byte(keylen>>8),
 		byte(keylen),
 	)
-	kexPayload = append(kexPayload, Q_pub...)
+	kexPayload = append(kexPayload, Q_c...)
 
 	fmt.Println("CLIENT: SSH_MSG_KEX_ECDH_INIT")
 	kexMsg := utils.NewSSHMessage(kexPayload, []byte{}, 8)
-	//utils.PrettyPrint(kexMsg)
-	time.Sleep(500 * time.Millisecond)
+	err = utils.SendMessage(conn, kexMsg.Marshal())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("SERVER:")
 	serverKexMsg, err := utils.ReadNextMessage(conn, 0)
 	if err != nil {
 		panic(err)
 	}
 	payload = serverKexMsg.Payload
-	//utils.PrettyPrint(serverKexMsg)
-	err = utils.SendMessage(conn, kexMsg.Marshal())
+
+	b := bytes.NewBuffer(payload)
+
+	serverKeys, err := utils.ReadKeyExchangeReply(b)
 	if err != nil {
+		panic(err)
+	}
+	fmt.Println()
+	fmt.Printf("edDSApub: [% x ]\n", serverKeys.EdDSApub)
+	fmt.Printf("keyType: %s\n", serverKeys.KeyType)
+	fmt.Printf("Q_c: [% x ]\n", serverKeys.Q_c)
+	fmt.Printf("Signature: %s \n", serverKeys.SignatureType)
+	fmt.Printf("data: [% x]\n", serverKeys.Signature)
+
+	serverNewKeys, err := utils.ReadNextMessage(conn, 0)
+	if err != nil {
+		panic(err)
+	}
+	b = bytes.NewBuffer(serverNewKeys.Padding)
+	if err = utils.ReadNewKeys(b); err != nil {
 		panic(err)
 	}
 }
