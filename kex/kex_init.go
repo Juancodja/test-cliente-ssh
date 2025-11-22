@@ -5,22 +5,22 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/Juancodja/sushi-ssh/utils"
+	"github.com/Juancodja/sushi-ssh/ssh"
 )
 
 type KexInit struct {
 	MessageCode                byte
 	Cookie                     [16]byte
-	KexAlgos                   utils.NameList
-	ServerHostKeyAlgos         utils.NameList
-	EncryptionClientToServer   utils.NameList
-	EncryptionServerToClient   utils.NameList
-	MacClientToServer          utils.NameList
-	MacServerToClient          utils.NameList
-	CompressionClientToServer  utils.NameList
-	CompressionServertToClient utils.NameList
-	LanguagesClientToServer    utils.NameList
-	LanguagesServerToClient    utils.NameList
+	KexAlgos                   ssh.NameList
+	ServerHostKeyAlgos         ssh.NameList
+	EncryptionClientToServer   ssh.NameList
+	EncryptionServerToClient   ssh.NameList
+	MacClientToServer          ssh.NameList
+	MacServerToClient          ssh.NameList
+	CompressionClientToServer  ssh.NameList
+	CompressionServertToClient ssh.NameList
+	LanguagesClientToServer    ssh.NameList
+	LanguagesServerToClient    ssh.NameList
 	FirstKexPacketFollows      bool
 	EmptyField                 uint32
 }
@@ -66,52 +66,52 @@ func UnmarshalKexInit(data []byte) (*KexInit, error) {
 	copy(cookie[:], data[1:17])
 
 	n := 17
-	nl0, shift, err := utils.UnmarshalNamelist(data[n:])
+	nl0, shift, err := ssh.UnmarshalNamelist(data[n:])
 	if err != nil {
 		return nil, err
 	}
 	n += shift
-	nl1, shift, err := utils.UnmarshalNamelist(data[n:])
+	nl1, shift, err := ssh.UnmarshalNamelist(data[n:])
 	if err != nil {
 		return nil, err
 	}
 	n += shift
-	nl2, shift, err := utils.UnmarshalNamelist(data[n:])
+	nl2, shift, err := ssh.UnmarshalNamelist(data[n:])
 	if err != nil {
 		return nil, err
 	}
 	n += shift
-	nl3, shift, err := utils.UnmarshalNamelist(data[n:])
+	nl3, shift, err := ssh.UnmarshalNamelist(data[n:])
 	if err != nil {
 		return nil, err
 	}
 	n += shift
-	nl4, shift, err := utils.UnmarshalNamelist(data[n:])
+	nl4, shift, err := ssh.UnmarshalNamelist(data[n:])
 	if err != nil {
 		return nil, err
 	}
 	n += shift
-	nl5, shift, err := utils.UnmarshalNamelist(data[n:])
+	nl5, shift, err := ssh.UnmarshalNamelist(data[n:])
 	if err != nil {
 		return nil, err
 	}
 	n += shift
-	nl6, shift, err := utils.UnmarshalNamelist(data[n:])
+	nl6, shift, err := ssh.UnmarshalNamelist(data[n:])
 	if err != nil {
 		return nil, err
 	}
 	n += shift
-	nl7, shift, err := utils.UnmarshalNamelist(data[n:])
+	nl7, shift, err := ssh.UnmarshalNamelist(data[n:])
 	if err != nil {
 		return nil, err
 	}
 	n += shift
-	nl8, shift, err := utils.UnmarshalNamelist(data[n:])
+	nl8, shift, err := ssh.UnmarshalNamelist(data[n:])
 	if err != nil {
 		return nil, err
 	}
 	n += shift
-	nl9, shift, err := utils.UnmarshalNamelist(data[n:])
+	nl9, shift, err := ssh.UnmarshalNamelist(data[n:])
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func ResoleveAlgos(client, server *KexInit) *Algos {
 	}
 }
 
-func FindMatchAlg(clientList, serverList utils.NameList) string {
+func FindMatchAlg(clientList, serverList ssh.NameList) string {
 	for _, v1 := range clientList {
 		for _, v2 := range serverList {
 			if v2 == v1 {

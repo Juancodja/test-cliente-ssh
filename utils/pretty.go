@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func PrettyPrint(data interface{}) {
+func PrettyPrint(data any) {
 	var p []byte
 	p, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
