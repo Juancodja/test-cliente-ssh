@@ -31,12 +31,12 @@ func DerivateConnState(ks *KexState) (*ssh.ConnectionState, error) {
 		SharedSecret:      K,
 		ExchangeHash:      H,
 		SessionId:         id,
-		IVClientToServer:  deriveKey(K, H, id, 'A')[:16],
-		IVServerToClient:  deriveKey(K, H, id, 'B')[:16],
-		KeyClientToServer: deriveKey(K, H, id, 'C')[:16],
-		KeyServerToClient: deriveKey(K, H, id, 'D')[:16],
-		MACClientToServer: deriveKey(K, H, id, 'E'),
-		MACServerToClient: deriveKey(K, H, id, 'F'),
+		IVClientToServer:  deriveKey(K, H, id, 'A', 16),
+		IVServerToClient:  deriveKey(K, H, id, 'B', 16),
+		KeyClientToServer: deriveKey(K, H, id, 'C', 16),
+		KeyServerToClient: deriveKey(K, H, id, 'D', 16),
+		MACClientToServer: deriveKey(K, H, id, 'E', 32),
+		MACServerToClient: deriveKey(K, H, id, 'F', 32),
 	}, nil
 }
 
@@ -77,15 +77,28 @@ func DerivateExchangeHash(k []byte, s *KexState) []byte {
 	return h[:]
 }
 
-func deriveKey(k, h, id []byte, label byte) []byte {
+func deriveKey(K, H, sessionId []byte, label byte, length int) []byte {
+	k := ssh.EncodeMpint(K).Marshal()
 
-	blob := make([]byte, 0)
+	var out []byte
+	previous := []byte{}
 
-	blob = append(blob, ssh.EncodeMpint(k).Marshal()...)
-	blob = append(blob, h...)
-	blob = append(blob, label)
-	blob = append(blob, id...)
+	for len(out) < length {
+		h := sha256.New()
+		h.Write(k)
+		h.Write(H)
 
-	key := sha256.Sum256(blob)
-	return key[:]
+		if len(out) == 0 {
+			h.Write([]byte{label})
+		} else {
+			h.Write(previous)
+		}
+
+		h.Write(sessionId)
+
+		previous = h.Sum(nil)
+		out = append(out, previous...)
+	}
+
+	return out[:length]
 }
